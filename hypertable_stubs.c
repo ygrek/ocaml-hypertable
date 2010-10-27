@@ -5,12 +5,19 @@
 
 using namespace Hypertable;
 
-template<> char const* wrapped<Client>::ml_name() { return "hypertable.Client"; }
-template<> char const* wrapped<Namespace>::ml_name() { return "hypertable.Namespace"; }
-template<> char const* wrapped<Table>::ml_name() { return "hypertable.Table"; }
-template<> char const* wrapped<TableMutator>::ml_name() { return "hypertable.TableMutator"; }
-template<> char const* wrapped<TableScanner>::ml_name() { return "hypertable.TableScanner"; }
-template<> char const* wrapped<ScanSpecBuilder>::ml_name() { return "hypertable.ScanSpecBuilder"; }
+typedef wrapped<NamespacePtr> ml_Namespace;
+typedef wrapped<ClientPtr> ml_Client;
+typedef wrapped<TablePtr> ml_Table;
+typedef wrapped_ptr<TableMutator> ml_TableMutator;
+typedef wrapped_ptr<TableScanner> ml_TableScanner;
+typedef wrapped_ptr<ScanSpecBuilder> ml_ScanSpecBuilder;
+
+template<> char const* ml_name<ml_Client::type>() { return "hypertable.Client"; }
+template<> char const* ml_name<ml_Namespace::type>() { return "hypertable.Namespace"; }
+template<> char const* ml_name<ml_Table::type>() { return "hypertable.Table"; }
+template<> char const* ml_name<ml_TableMutator::type>() { return "hypertable.TableMutator"; }
+template<> char const* ml_name<ml_TableScanner::type>() { return "hypertable.TableScanner"; }
+template<> char const* ml_name<ml_ScanSpecBuilder::type>() { return "hypertable.ScanSpecBuilder"; }
 
 extern "C" {
 
@@ -104,7 +111,7 @@ static void raise_error(Exception& e)
 
 CAML_HT_F4(client_create, v_install_dir, v_cfg_file, v_timeout_ms, v_unit)
 {
-  Client* p = NULL;
+  ClientPtr p;
   String install_dir;
   uint32_t timeout = 0;
 
@@ -119,68 +126,65 @@ CAML_HT_F4(client_create, v_install_dir, v_cfg_file, v_timeout_ms, v_unit)
   {
     p = new Client(install_dir, string_of_val(Some_val(v_cfg_file)), timeout);
   }
-  CAMLreturn(wrapped<Client>::alloc(p));
+  CAMLreturn(ml_Client::alloc(p));
 }
 CAML_HT_END
 
 CAML_HT_F3(client_open_ns, v_client, v_base, v_name)
 {
-  Namespace* base = NULL;
-  Namespace* ns = NULL;
+  NamespacePtr base;
   if (Val_none != v_base)
-    base = wrapped<Namespace>::get(Some_val(v_base));
-  /* FIXME wrap NamespacePtr */
-  ns = wrapped<Client>::get(v_client)->open_namespace(string_of_val(v_name),base).get();
-  CAMLreturn(wrapped<Namespace>::alloc(ns));
+    base = ml_Namespace::get(Some_val(v_base));
+  NamespacePtr ns = ml_Client::get(v_client)->open_namespace(string_of_val(v_name),base.get());
+  CAMLreturn(ml_Namespace::alloc(ns));
 }
 CAML_HT_END
 
 CAML_HT_F3(ns_open_table, v_ns, v_name, v_force)
 {
-  /* FIXME wrap TablePtr */
-  Table* p = wrapped<Namespace>::get(v_ns)->open_table(string_of_val(v_name), Bool_val(v_force)).get();
-  CAMLreturn(wrapped<Table>::alloc(p));
+  TablePtr p = ml_Namespace::get(v_ns)->open_table(string_of_val(v_name), Bool_val(v_force));
+  CAMLreturn(ml_Table::alloc(p));
 }
 CAML_HT_END
 
 CAML_HT_F4(table_create_mutator, v_table, v_timeout, v_flags, v_flush_interval)
 {
-  TableMutator* p = wrapped<Table>::get(v_table)->create_mutator(Int_val(v_timeout), Int_val(v_flags), Int_val(v_flush_interval));
-  CAMLreturn(wrapped<TableMutator>::alloc(p));
+  TableMutator* p = ml_Table::get(v_table)->create_mutator(Int_val(v_timeout), Int_val(v_flags), Int_val(v_flush_interval));
+  CAMLreturn(ml_TableMutator::alloc(p));
 }
 CAML_HT_END
 
 CAML_HT_F4(table_create_scanner, v_table, v_scanspec, v_timeout, v_retry)
 {
-  ScanSpec& scanspec = wrapped<ScanSpecBuilder>::get(v_scanspec)->get();
-  TableScanner* p = wrapped<Table>::get(v_table)->create_scanner(scanspec, Int_val(v_timeout), Bool_val(v_retry));
-  CAMLreturn(wrapped<TableScanner>::alloc(p));
+  ScanSpec& scanspec = ml_ScanSpecBuilder::get(v_scanspec)->get();
+  TableScanner* p = ml_Table::get(v_table)->create_scanner(scanspec, Int_val(v_timeout), Bool_val(v_retry));
+  CAMLreturn(ml_TableScanner::alloc(p));
 }
 CAML_HT_END
 
 CAML_HT_F1(scanspec_create, v_unit)
 {
-  CAMLreturn(wrapped<ScanSpecBuilder>::alloc(new ScanSpecBuilder()));
+  CAMLreturn(ml_ScanSpecBuilder::alloc(new ScanSpecBuilder()));
 }
 CAML_HT_END
 
 CAML_HT_F2(scanspec_add_cf, v_ss, v_cf)
 {
-  wrapped<ScanSpecBuilder>::get(v_ss)->add_column(String_val(v_cf));
+  ml_ScanSpecBuilder::get(v_ss)->add_column(String_val(v_cf));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
 
 CAML_HT_F2(scanspec_add_row, v_ss, v_row)
 {
-  wrapped<ScanSpecBuilder>::get(v_ss)->add_row(String_val(v_row));
+  ml_ScanSpecBuilder::get(v_ss)->add_row(String_val(v_row));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
 
 CAML_HT_F4(scanspec_add_rows, v_ss, v_start, v_end, v_incl)
 {
-  wrapped<ScanSpecBuilder>::get(v_ss)->add_row_interval(
+  ml_ScanSpecBuilder::get(v_ss)->add_row_interval(
     String_val(v_start), Bool_val(v_incl),
     String_val(v_end), Bool_val(v_incl));
   CAMLreturn(Val_unit);
@@ -191,7 +195,7 @@ CAML_HT_F1(tscan_next, t_scan)
 {
   CAMLlocal2(v_cell, v_val);
   Cell cell;
-  if (wrapped<TableScanner>::get(t_scan)->next(cell))
+  if (ml_TableScanner::get(t_scan)->next(cell))
   {
     v_cell = caml_alloc(6, 0);
     v_val = caml_alloc_string(cell.value_len);
@@ -223,7 +227,7 @@ CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
   key.column_qualifier = String_val(Field(v_key,2));
   key.column_qualifier_len = caml_string_length(Field(v_key,2));
   key.timestamp = Int64_val(Field(v_key,3));
-  wrapped<TableMutator>::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
+  ml_TableMutator::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
@@ -240,14 +244,14 @@ CAML_HT_F5(tmut_set, v_tmut, v_row, v_cf, v_cq, v_val)
     key.column_qualifier = String_val(Some_val(v_cq));
     key.column_qualifier_len = caml_string_length(Some_val(v_cq));
   }
-  wrapped<TableMutator>::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
+  ml_TableMutator::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
 
 CAML_HT_F1(tmut_flush, v_tmut)
 {
-  wrapped<TableMutator>::get(v_tmut)->flush();
+  ml_TableMutator::get(v_tmut)->flush();
   CAMLreturn(Val_unit);
 }
 CAML_HT_END

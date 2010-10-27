@@ -3,9 +3,9 @@ open Hypertable
 
 let () =
   Hypertable.init ();
-  let cl = Client.create ~cfg:"/opt/hypertable/current/conf/hypertable.cfg" () in
   match List.tl (Array.to_list Sys.argv) with
   | ns::table::cfs ->
+    let cl = Client.create ~cfg:"/opt/hypertable/current/conf/hypertable.cfg" () in
     let ns = Client.open_ns cl ns in
     let table = Namespace.open_table ns table in
     let ss = ScanSpec.create () in
