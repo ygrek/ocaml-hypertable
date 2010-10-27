@@ -1,0 +1,15 @@
+# OASIS_START
+# DO NOT EDIT (digest: 560b7d1259ce4cf9d5afae51a0d96ea2)
+# Library hypertable
+<*.ml{,i}>: oasis_library_hypertable_ccopt
+"hypertable_stubs.c": oasis_library_hypertable_ccopt
+"hypertable.cmxa": oasis_library_hypertable_cclib
+"libhypertable.lib": oasis_library_hypertable_cclib
+"dllhypertable.dll": oasis_library_hypertable_cclib
+"libhypertable.a": oasis_library_hypertable_cclib
+"dllhypertable.so": oasis_library_hypertable_cclib
+"hypertable.cmxa": use_libhypertable
+# Executable test
+<test.{native,byte}>: use_hypertable
+<*.ml{,i}>: use_hypertable
+# OASIS_STOP
