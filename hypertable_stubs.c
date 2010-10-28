@@ -35,6 +35,20 @@ static value Val_some(value v)
     CAMLreturn(some);
 }
 
+static value Val_pair(value v1, value v2)
+{
+  CAMLparam2(v1,v2);
+  CAMLlocal1(pair);
+  pair = caml_alloc_small(2,0);
+  Field(pair,0) = v1;
+  Field(pair,1) = v2;
+  CAMLreturn(pair);
+}
+
+static value Val_cons(value list, value v) { return Val_pair(v,list); }
+
+#define Val_nil Val_int(0)
+
 #define Some_val(v) Field(v,0)
 
 #define Bytes_val(v) (&Byte_u(v,0))
@@ -96,6 +110,14 @@ CAMLprim value caml_hypertable_##name(value v1, value v2, value v3, value v4, va
   } \
 }
 
+#define CAML_HT_DTOR(cls,name) \
+CAML_HT_F1(name, v) \
+{ \
+  cls::release(v); \
+  CAMLreturn(Val_unit); \
+} \
+CAML_HT_END
+
 static void raise_error(Exception& e) 
 {
   static value* exn = NULL;
@@ -107,6 +129,22 @@ static void raise_error(Exception& e)
   std::ostringstream os;
   os << e << endl;
   caml_raise_with_string(*exn, os.str().c_str());
+}
+
+CAMLprim value caml_hypertable_values_count(value v_unit)
+{
+  CAMLparam1(v_unit);
+  CAMLlocal1(v_list);
+
+  v_list = Val_nil;
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Table::name()), Val_int(ml_Table::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableScanner::name()), Val_int(ml_TableScanner::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableMutator::name()), Val_int(ml_TableMutator::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Namespace::name()), Val_int(ml_Namespace::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Client::name()), Val_int(ml_Client::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_ScanSpecBuilder::name()), Val_int(ml_ScanSpecBuilder::count())));
+
+  CAMLreturn(v_list);
 }
 
 CAML_HT_F4(client_create, v_install_dir, v_cfg_file, v_timeout_ms, v_unit)
@@ -168,6 +206,13 @@ CAML_HT_F1(scanspec_create, v_unit)
 }
 CAML_HT_END
 
+CAML_HT_F1(scanspec_reset, v_ss)
+{
+  ml_ScanSpecBuilder::get(v_ss)->clear();
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
 CAML_HT_F2(scanspec_add_cf, v_ss, v_cf)
 {
   ml_ScanSpecBuilder::get(v_ss)->add_column(String_val(v_cf));
@@ -200,6 +245,13 @@ CAML_HT_F4(scanspec_add_cells, v_ss, v_start, v_end, v_incl)
 }
 CAML_HT_END
 
+CAML_HT_F2(scanspec_keys_only, v_ss, v_b)
+{
+  ml_ScanSpecBuilder::get(v_ss)->set_keys_only(Bool_val(v_b));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
 CAML_HT_F1(tscan_next, t_scan)
 {
   CAMLlocal2(v_cell, v_val);
@@ -223,6 +275,12 @@ CAML_HT_F1(tscan_next, t_scan)
   {
     CAMLreturn(Val_none);
   }
+}
+CAML_HT_END
+
+CAML_HT_F1(tscan_bytes, v_tscan)
+{
+  CAMLreturn(caml_copy_int64(ml_TableScanner::get(v_tscan)->bytes_scanned()));
 }
 CAML_HT_END
 
@@ -267,6 +325,13 @@ CAML_HT_F1(tmut_flush, v_tmut)
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
+
+CAML_HT_DTOR(ml_ScanSpecBuilder,scanspec_release)
+CAML_HT_DTOR(ml_TableScanner,tscan_release)
+CAML_HT_DTOR(ml_TableMutator,tmut_release)
+CAML_HT_DTOR(ml_Table,table_release)
+CAML_HT_DTOR(ml_Client,client_release)
+CAML_HT_DTOR(ml_Namespace,ns_release)
 
 } // extern "C"
 
