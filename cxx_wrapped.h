@@ -1,6 +1,6 @@
 // Simple template to wrap C++ object as OCaml custom value
 // Copyright (C) 2010, ygrek <ygrek@autistici.org>
-// 27/10/2010
+// 28/10/2010
 //
 // value wrapped<Ptr>::alloc(Ptr)
 //    creates custom value with pointer to C++ object inside
@@ -11,6 +11,8 @@
 // Ptr const& wrapped<Ptr>::get(value)
 //    returns pointer to wrapped object
 //    raises OCaml Invalid_argument exception if pointer was already released
+// size_t wrapped<Ptr>::count()
+//    returns the number of currently allocated Ptr wrappers
 //
 // wrapped<> manages smart pointers to C++ objects
 // wrapped_ptr<> manages raw pointers (owns pointed object, release() destroys object)
@@ -44,41 +46,47 @@ private:
     Ptr p;
   };
 
+  static size_t count_;
+
 #define Wrapped_val(v) (*(ml_wrapped**)Data_custom_val(v))
 
   static void finalize(value v)
   {
     release(v);
-    caml_stat_free(Wrapped_val(v));
+    delete Wrapped_val(v);
   }
 
 public:
   typedef Ptr type;
 
+  static size_t count() { return count_; }
+  static char const* name() { return ml_name<Ptr>(); }
+
   static Ptr const& get(value v) // do not copy
   {
     Ptr const& p = Wrapped_val(v)->p;
-    //printf("get %lx : %s\n",(size_t)p.get(),ml_name<Ptr>());
-    if (NULL == p.get()) caml_invalid_argument(ml_name<Ptr>());
+    //printf("get %lx : %s\n",(size_t)p.get(),name());
+    if (NULL == p.get()) caml_invalid_argument(name());
     return p;
   }
 
   static void release(value v)
   {
     Ptr p = Wrapped_val(v)->p;
-    //printf("release %lx : %s\n",(size_t)p.get(),ml_name<Ptr>());
-    //if (NULL == p.get()) return;
+    //printf("release %lx : %s\n",(size_t)p.get(),name());
+    if (NULL == p.get()) return;
+    count_--;
     p.reset();
   }
 
   static value alloc(Ptr p) // copy is ok
   {
-    //printf("alloc %lx : %s\n",(size_t)p.get(),ml_name<Ptr>());
+    //printf("alloc %lx : %s\n",(size_t)p.get(),name());
     CAMLparam0();
     CAMLlocal1(v);
 
     static struct custom_operations wrapped_ops = {
-      const_cast<char*>(ml_name<Ptr>()),
+      const_cast<char*>(name()),
       finalize,
       custom_compare_default,
       custom_hash_default,
@@ -91,12 +99,17 @@ public:
     ml_wrapped* ml = new ml_wrapped(p); //(ml_wrapped*)caml_stat_alloc(sizeof(ml_wrapped));
     Wrapped_val(v) = ml;
 
+    count_++;
+
     CAMLreturn(v);
   }
 
 #undef Wrapped_val
 
 }; //wrapped
+
+template<class T>
+size_t wrapped<T>::count_ = 0;
 
 template<class T>
 struct wrapped_ptr : public wrapped<std::auto_ptr<T> >
