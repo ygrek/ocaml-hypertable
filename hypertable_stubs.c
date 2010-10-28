@@ -191,6 +191,15 @@ CAML_HT_F4(scanspec_add_rows, v_ss, v_start, v_end, v_incl)
 }
 CAML_HT_END
 
+CAML_HT_F4(scanspec_add_cells, v_ss, v_start, v_end, v_incl)
+{
+  ml_ScanSpecBuilder::get(v_ss)->add_cell_interval(
+    String_val(Field(v_start,0)), String_val(Field(v_start,1)), Bool_val(v_incl),
+    String_val(Field(v_end,0)), String_val(Field(v_end,1)), Bool_val(v_incl));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
 CAML_HT_F1(tscan_next, t_scan)
 {
   CAMLlocal2(v_cell, v_val);
@@ -224,8 +233,11 @@ CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
   key.row = String_val(Field(v_key,0));
   key.row_len = caml_string_length(Field(v_key,0));
   key.column_family = String_val(Field(v_key,1));
-  key.column_qualifier = String_val(Field(v_key,2));
-  key.column_qualifier_len = caml_string_length(Field(v_key,2));
+  if (Val_none != Field(v_key,2)) 
+  {
+    key.column_qualifier = String_val(Some_val(Field(v_key,2)));
+    key.column_qualifier_len = caml_string_length(Some_val(Field(v_key,2)));
+  }
   key.timestamp = Int64_val(Field(v_key,3));
   ml_TableMutator::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
   CAMLreturn(Val_unit);

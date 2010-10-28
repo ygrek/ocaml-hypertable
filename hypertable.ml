@@ -2,14 +2,14 @@
 
 exception Error of string
 
-module Key = struct
-type t = { row : string; cf : string; cq : string; t : int64; }
+module KeySpec = struct
+type t = { row : string; cf : string; cq : string option; t : int64; }
 end
 
 module Mutator = struct
 type t
-external set_key : t -> Key.t -> string -> unit = "caml_hypertable_tmut_set_key"
-external set : t -> r:string -> cf:string -> ?cq:string option (* -> ?t:int64 option *) -> string -> unit = "caml_hypertable_tmut_set"
+external set_key : t -> KeySpec.t -> string -> unit = "caml_hypertable_tmut_set_key"
+external set : t -> row:string -> cf:string -> ?cq:string option (* -> ?t:int64 option *) -> string -> unit = "caml_hypertable_tmut_set"
 external flush : t -> unit = "caml_hypertable_tmut_flush"
 end
 
@@ -21,6 +21,7 @@ external create : unit -> t = "caml_hypertable_scanspec_create"
 external add_cf : t -> string -> unit = "caml_hypertable_scanspec_add_cf"
 external add_row : t -> string -> unit = "caml_hypertable_scanspec_add_row"
 external add_rows : t -> start:string -> ends:string -> incl:bool -> unit = "caml_hypertable_scanspec_add_rows"
+external add_cells : t -> start:(string*string) -> ends:(string*string) -> incl:bool -> unit = "caml_hypertable_scanspec_add_cells"
 end
 
 module Scanner = struct
