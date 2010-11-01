@@ -22,7 +22,6 @@ template<> char const* ml_name<ml_ScanSpecBuilder::type>() { return "hypertable.
 extern "C" {
 
 #include <caml/callback.h>
-#include <caml/signals.h>
 
 #define Val_none Val_int(0)
 
@@ -284,44 +283,45 @@ CAML_HT_F1(tscan_bytes, v_tscan)
 }
 CAML_HT_END
 
+#define CAML_UNLOCKED(smth) do { caml_blocking_section lock; smth; } while (0)
+
 CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
 {
-  KeySpec key;
-  /* not copied */
-  key.row = String_val(Field(v_key,0));
-  key.row_len = caml_string_length(Field(v_key,0));
-  key.column_family = String_val(Field(v_key,1));
+  KeySpecBuilder key;
+  key.set_row(String_val(Field(v_key,0)));
+  key.set_column_family(String_val(Field(v_key,1)));
   if (Val_none != Field(v_key,2)) 
   {
-    key.column_qualifier = String_val(Some_val(Field(v_key,2)));
-    key.column_qualifier_len = caml_string_length(Some_val(Field(v_key,2)));
+    key.set_column_qualifier(String_val(Some_val(Field(v_key,2))));
   }
-  key.timestamp = Int64_val(Field(v_key,3));
-  ml_TableMutator::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
+  key.set_timestamp(Int64_val(Field(v_key,3)));
+  String val(String_val(v_val), caml_string_length(v_val));
+  TableMutator* p = ml_TableMutator::get(v_tmut);
+  CAML_UNLOCKED(p->set(key.get(), val));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
 
 CAML_HT_F5(tmut_set, v_tmut, v_row, v_cf, v_cq, v_val)
 {
-  KeySpec key;
-  /* not copied */
-  key.row = String_val(v_row);
-  key.row_len = caml_string_length(v_row);
-  key.column_family = String_val(v_cf);
+  KeySpecBuilder key;
+  key.set_row(String_val(v_row));
+  key.set_column_family(String_val(v_cf));
   if (Val_none != v_cq) 
   {
-    key.column_qualifier = String_val(Some_val(v_cq));
-    key.column_qualifier_len = caml_string_length(Some_val(v_cq));
+    key.set_column_qualifier(String_val(Some_val(v_cq)));
   }
-  ml_TableMutator::get(v_tmut)->set(key, String_val(v_val), caml_string_length(v_val));
+  String val(String_val(v_val), caml_string_length(v_val));
+  TableMutator* p = ml_TableMutator::get(v_tmut);
+  CAML_UNLOCKED(p->set(key.get(), val));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
 
 CAML_HT_F1(tmut_flush, v_tmut)
 {
-  ml_TableMutator::get(v_tmut)->flush();
+  TableMutator* p = ml_TableMutator::get(v_tmut);
+  CAML_UNLOCKED(p->flush());
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
