@@ -1,6 +1,6 @@
 // Simple template to wrap C++ object as OCaml custom value
 // Copyright (C) 2010, ygrek <ygrek@autistici.org>
-// 28/10/2010
+// 01/11/2010
 //
 // value wrapped<Ptr>::alloc(Ptr)
 //    creates custom value with pointer to C++ object inside
@@ -25,6 +25,7 @@ extern "C" {
 #include <caml/alloc.h>
 #include <caml/custom.h>
 #include <caml/fail.h>
+#include <caml/signals.h>
 }
 
 #include <auto_ptr.h>
@@ -124,4 +125,14 @@ struct wrapped_ptr : public wrapped<std::auto_ptr<T> >
     return base::alloc(std::auto_ptr<T>(p));
   }
 }; // wrapped_ptr
+
+class caml_blocking_section // : boost::noncopyable
+{
+public:
+  caml_blocking_section() { caml_enter_blocking_section(); }
+  ~caml_blocking_section() { caml_leave_blocking_section(); }
+private:
+  caml_blocking_section( const caml_blocking_section& );
+  const caml_blocking_section& operator=( const caml_blocking_section& );
+};
 
