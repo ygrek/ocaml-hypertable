@@ -4670,6 +4670,7 @@ module OCamlbuildPlugin = struct
   
     (* Check and register built files *)
     let check_and_register (bt, bnm, lst) = 
+(*
       List.iter
         (fun fns ->
            if not (List.exists Sys.file_exists fns) then
@@ -4677,6 +4678,7 @@ module OCamlbuildPlugin = struct
                (f_ "No one of expected built files %s exists")
                (String.concat (s_ ", ") (List.map (Printf.sprintf "'%s'") fns)))
         lst;
+*)
         (BaseBuilt.register bt bnm lst) 
     in
   

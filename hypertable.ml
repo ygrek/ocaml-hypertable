@@ -11,6 +11,7 @@ type t
 external set_key : t -> KeySpec.t -> string -> unit = "caml_hypertable_tmut_set_key"
 external set : t -> row:string -> cf:string -> ?cq:string (* -> ?t:int64 *) -> string -> unit = "caml_hypertable_tmut_set"
 external flush : t -> unit = "caml_hypertable_tmut_flush"
+external memory_used : t -> int64 = "caml_hypertable_tmut_memory_used"
 external release : t -> unit = "caml_hypertable_tmut_release"
 end
 

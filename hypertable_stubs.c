@@ -8,8 +8,8 @@ using namespace Hypertable;
 typedef wrapped<NamespacePtr> ml_Namespace;
 typedef wrapped<ClientPtr> ml_Client;
 typedef wrapped<TablePtr> ml_Table;
-typedef wrapped_ptr<TableMutator> ml_TableMutator;
-typedef wrapped_ptr<TableScanner> ml_TableScanner;
+typedef wrapped<TableMutatorPtr> ml_TableMutator;
+typedef wrapped<TableScannerPtr> ml_TableScanner;
 typedef wrapped_ptr<ScanSpecBuilder> ml_ScanSpecBuilder;
 
 template<> char const* ml_name<ml_Client::type>() { return "hypertable.Client"; }
@@ -186,7 +186,7 @@ CAML_HT_END
 
 CAML_HT_F4(table_create_mutator, v_table, v_timeout, v_flags, v_flush_interval)
 {
-  TableMutator* p = ml_Table::get(v_table)->create_mutator(Int_val(v_timeout), Int_val(v_flags), Int_val(v_flush_interval));
+  TableMutatorPtr p = ml_Table::get(v_table)->create_mutator(Int_val(v_timeout), Int_val(v_flags), Int_val(v_flush_interval));
   CAMLreturn(ml_TableMutator::alloc(p));
 }
 CAML_HT_END
@@ -194,7 +194,7 @@ CAML_HT_END
 CAML_HT_F4(table_create_scanner, v_table, v_scanspec, v_timeout, v_retry)
 {
   ScanSpec& scanspec = ml_ScanSpecBuilder::get(v_scanspec)->get();
-  TableScanner* p = ml_Table::get(v_table)->create_scanner(scanspec, Int_val(v_timeout), Bool_val(v_retry));
+  TableScannerPtr p = ml_Table::get(v_table)->create_scanner(scanspec, Int_val(v_timeout), Bool_val(v_retry));
   CAMLreturn(ml_TableScanner::alloc(p));
 }
 CAML_HT_END
@@ -296,7 +296,7 @@ CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
   }
   key.set_timestamp(Int64_val(Field(v_key,3)));
   String val(String_val(v_val), caml_string_length(v_val));
-  TableMutator* p = ml_TableMutator::get(v_tmut);
+  TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->set(key.get(), val));
   CAMLreturn(Val_unit);
 }
@@ -312,7 +312,7 @@ CAML_HT_F5(tmut_set, v_tmut, v_row, v_cf, v_cq, v_val)
     key.set_column_qualifier(String_val(Some_val(v_cq)));
   }
   String val(String_val(v_val), caml_string_length(v_val));
-  TableMutator* p = ml_TableMutator::get(v_tmut);
+  TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->set(key.get(), val));
   CAMLreturn(Val_unit);
 }
@@ -320,9 +320,18 @@ CAML_HT_END
 
 CAML_HT_F1(tmut_flush, v_tmut)
 {
-  TableMutator* p = ml_TableMutator::get(v_tmut);
+  TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->flush());
   CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F1(tmut_memory_used, v_tmut)
+{
+  TableMutatorPtr p = ml_TableMutator::get(v_tmut);
+  uint64_t mem;
+  CAML_UNLOCKED(mem = p->memory_used());
+  CAMLreturn(caml_copy_int64(mem));
 }
 CAML_HT_END
 
