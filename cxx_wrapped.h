@@ -73,7 +73,7 @@ public:
 
   static void release(value v)
   {
-    Ptr p = Wrapped_val(v)->p;
+    Ptr& p = Wrapped_val(v)->p;
     //printf("release %lx : %s\n",(size_t)p.get(),name());
     if (NULL == p.get()) return;
     count_--;
