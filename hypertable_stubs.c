@@ -251,6 +251,27 @@ CAML_HT_F2(scanspec_keys_only, v_ss, v_b)
 }
 CAML_HT_END
 
+CAML_HT_F2(scanspec_set_cell_limit, v_ss, v_n)
+{
+  ml_ScanSpecBuilder::get(v_ss)->set_cell_limit(Int_val(v_n));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F2(scanspec_set_row_limit, v_ss, v_n)
+{
+  ml_ScanSpecBuilder::get(v_ss)->set_row_limit(Int_val(v_n));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F2(scanspec_set_max_versions, v_ss, v_n)
+{
+  ml_ScanSpecBuilder::get(v_ss)->set_max_versions(Int_val(v_n));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
 CAML_HT_F1(tscan_next, t_scan)
 {
   CAMLlocal2(v_cell, v_val);

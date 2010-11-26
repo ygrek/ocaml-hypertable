@@ -25,6 +25,16 @@ external add_cf : t -> string -> unit = "caml_hypertable_scanspec_add_cf"
 external add_row : t -> string -> unit = "caml_hypertable_scanspec_add_row"
 external add_rows : t -> start:string -> ends:string -> incl:bool -> unit = "caml_hypertable_scanspec_add_rows"
 external add_cells : t -> start:(string*string) -> ends:(string*string) -> incl:bool -> unit = "caml_hypertable_scanspec_add_cells"
+
+(** Sets the maximum number of cells to return per column family, per row *)
+external set_cell_limit : t -> int -> unit = "caml_hypertable_scanspec_set_cell_limit"
+
+(** Sets the maximum number of rows to return in the scan. *)
+external set_row_limit : t -> int -> unit = "caml_hypertable_scanspec_set_row_limit"
+
+(** Sets the maximum number of revisions of each cell to return in the scan. *)
+external set_max_versions : t -> int -> unit = "caml_hypertable_scanspec_set_max_versions"
+
 external keys_only : t -> bool -> unit = "caml_hypertable_scanspec_keys_only"
 external release : t -> unit = "caml_hypertable_scanspec_release"
 end
