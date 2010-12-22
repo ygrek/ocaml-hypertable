@@ -16,9 +16,18 @@ Library hypertable
   CClib: -L/opt/hypertable/current/lib -failsafe -lstdc++ -lHypertable -lHyperComm -lHyperDfsBroker -lHyperCommon -lHyperspace -lHyperTools -llog4cpp -lexpat -lboost_thread -lboost_iostreams -lboost_program_options -lboost_system -lsigar-amd64-linux -lz -lcurses -lrrd -lboost_filesystem
   CSources: hypertable_stubs.c, cxx_wrapped.h
 
-Executable test
+Executable hypertable_cli
   Path: .
   MainIs: test.ml
   CompiledObject: best
   BuildDepends: hypertable
+
+Document api
+  Title: API reference
+  Type: ocamlbuild
+  BuildTools: ocamldoc
+  Format: HTML
+  Index: index.html
+  XOCamlbuildPath: .
+  XOCamlbuildModules: Hypertable
 

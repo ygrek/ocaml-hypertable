@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: a90a9bdccc262e01e2425a463370dff1)
+# DO NOT EDIT (digest: 69d8318d19f325a79a625c58543d21e0)
 version = "0.0.1"
 description = "hypertable bindings"
 archive(byte) = "hypertable.cma"
 archive(native) = "hypertable.cmxa"
+exists_if = "hypertable.cmxa"
 # OASIS_STOP
 
