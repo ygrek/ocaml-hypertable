@@ -6,7 +6,7 @@ Authors:     ygrek
 License:     LGPL-2.1 with OCaml linking exception
 Copyrights:  (c) 2010 ygrek
 Plugins:     DevFiles, META
-BuildTools:  ocamlbuild
+BuildTools:  ocamlbuild, g++
 
 Library hypertable
   Path: .
