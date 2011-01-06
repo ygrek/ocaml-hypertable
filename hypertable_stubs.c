@@ -180,9 +180,12 @@ CAML_HT_END
 CAML_HT_F4(client_create_ns, v_client, v_base, v_create_intermediate, v_name)
 {
   NamespacePtr base;
+  bool create_intermediate = false;
   if (Val_none != v_base)
     base = ml_Namespace::get(Some_val(v_base));
-  ml_Client::get(v_client)->create_namespace(string_of_val(v_name), base.get(), Bool_val(v_create_intermediate));
+  if(Val_none != v_create_intermediate)
+    create_intermediate = Bool_val(Some_val(v_create_intermediate));
+  ml_Client::get(v_client)->create_namespace(string_of_val(v_name), base.get(), create_intermediate);
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
@@ -200,9 +203,12 @@ CAML_HT_END
 CAML_HT_F4(client_drop_ns, v_client, v_base, v_if_exists, v_name)
 {
   NamespacePtr base;
+  bool if_exists = false;
   if (Val_none != v_base)
     base = ml_Namespace::get(Some_val(v_base));
-  ml_Client::get(v_client)->drop_namespace(string_of_val(v_name), base.get(), Bool_val(v_if_exists));
+  if(Val_none != v_if_exists)
+    if_exists = Bool_val(Some_val(v_if_exists));
+  ml_Client::get(v_client)->drop_namespace(string_of_val(v_name), base.get(), if_exists);
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
