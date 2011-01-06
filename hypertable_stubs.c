@@ -177,10 +177,91 @@ CAML_HT_F3(client_open_ns, v_client, v_base, v_name)
 }
 CAML_HT_END
 
+CAML_HT_F4(client_create_ns, v_client, v_base, v_create_intermediate, v_name)
+{
+  NamespacePtr base;
+  if (Val_none != v_base)
+    base = ml_Namespace::get(Some_val(v_base));
+  ml_Client::get(v_client)->create_namespace(string_of_val(v_name), base.get(), Bool_val(v_create_intermediate));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F3(client_exists_ns, v_client, v_base, v_name)
+{
+  NamespacePtr base;
+  if (Val_none != v_base)
+    base = ml_Namespace::get(Some_val(v_base));
+  int exists = ml_Client::get(v_client)->exists_namespace(string_of_val(v_name),base.get());
+  CAMLreturn(Bool_val(exists));
+}
+CAML_HT_END
+
+CAML_HT_F4(client_drop_ns, v_client, v_base, v_if_exists, v_name)
+{
+  NamespacePtr base;
+  if (Val_none != v_base)
+    base = ml_Namespace::get(Some_val(v_base));
+  ml_Client::get(v_client)->drop_namespace(string_of_val(v_name), base.get(), Bool_val(v_if_exists));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
 CAML_HT_F3(ns_open_table, v_ns, v_name, v_force)
 {
   TablePtr p = ml_Namespace::get(v_ns)->open_table(string_of_val(v_name), Bool_val(v_force));
   CAMLreturn(ml_Table::alloc(p));
+}
+CAML_HT_END
+
+CAML_HT_F3(ns_create_table, v_ns, v_name, v_schema)
+{
+  ml_Namespace::get(v_ns)->create_table(string_of_val(v_name), string_of_val(v_schema));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F3(ns_alter_table, v_ns, v_name, v_schema)
+{
+  ml_Namespace::get(v_ns)->alter_table(string_of_val(v_name), string_of_val(v_schema));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F3(ns_drop_table, v_ns, v_name, v_if_exists)
+{
+  ml_Namespace::get(v_ns)->drop_table(string_of_val(v_name), Bool_val(v_if_exists));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F3(ns_rename_table, v_ns, v_old_name, v_new_name)
+{
+  ml_Namespace::get(v_ns)->rename_table(string_of_val(v_old_name), string_of_val(v_new_name));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F2(ns_refresh_table, v_ns, v_name)
+{
+  ml_Namespace::get(v_ns)->refresh_table(string_of_val(v_name));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F2(ns_exists_table, v_ns, v_name)
+{
+  int exists = ml_Namespace::get(v_ns)->exists_table(string_of_val(v_name));
+  CAMLreturn(Bool_val(exists));
+}
+CAML_HT_END
+
+CAML_HT_F3(ns_get_schema, v_ns, v_with_ids, v_name)
+{
+  CAMLlocal1(v_schema);
+  String schema = ml_Namespace::get(v_ns)->get_schema_str(string_of_val(v_name), Bool_val(v_with_ids));
+  v_schema = caml_alloc_string(schema.length());
+  CAMLreturn(v_schema);
 }
 CAML_HT_END
 
@@ -335,6 +416,25 @@ CAML_HT_F5(tmut_set, v_tmut, v_row, v_cf, v_cq, v_val)
   String val(String_val(v_val), caml_string_length(v_val));
   TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->set(key.get(), val));
+  CAMLreturn(Val_unit);
+}
+CAML_HT_END
+
+CAML_HT_F2(tmut_set_delete, v_tmut, v_key)
+{
+  KeySpecBuilder key;
+  key.set_row(String_val(Field(v_key,0)));
+  if (Val_none != Field(v_key,1)) 
+  {
+    key.set_column_family(String_val(Field(v_key,1)));
+  }
+  if (Val_none != Field(v_key,2)) 
+  {
+    key.set_column_qualifier(String_val(Some_val(Field(v_key,2))));
+  }
+  key.set_timestamp(Int64_val(Field(v_key,3)));
+  TableMutatorPtr p = ml_TableMutator::get(v_tmut);
+  CAML_UNLOCKED(p->set_delete(key.get()));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
