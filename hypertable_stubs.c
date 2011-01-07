@@ -52,7 +52,6 @@ static value Val_cons(value list, value v) { return Val_pair(v,list); }
 
 #define Bytes_val(v) (&Byte_u(v,0))
 
-/*
 static value val_of_string(String const& s)
 {
   CAMLparam0();
@@ -61,7 +60,6 @@ static value val_of_string(String const& s)
   memcpy(String_val(v), s.c_str(), s.size());
   CAMLreturn(v);
 }
-*/
 
 static String string_of_val(value v)
 {
@@ -177,15 +175,12 @@ CAML_HT_F3(client_open_ns, v_client, v_base, v_name)
 }
 CAML_HT_END
 
-CAML_HT_F4(client_create_ns, v_client, v_base, v_create_intermediate, v_name)
+CAML_HT_F4(client_create_ns, v_client, v_base, v_intermediate, v_name)
 {
   NamespacePtr base;
-  bool create_intermediate = false;
   if (Val_none != v_base)
     base = ml_Namespace::get(Some_val(v_base));
-  if(Val_none != v_create_intermediate)
-    create_intermediate = Bool_val(Some_val(v_create_intermediate));
-  ml_Client::get(v_client)->create_namespace(string_of_val(v_name), base.get(), create_intermediate);
+  ml_Client::get(v_client)->create_namespace(string_of_val(v_name), base.get(), Bool_val(v_intermediate));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
@@ -196,19 +191,16 @@ CAML_HT_F3(client_exists_ns, v_client, v_base, v_name)
   if (Val_none != v_base)
     base = ml_Namespace::get(Some_val(v_base));
   int exists = ml_Client::get(v_client)->exists_namespace(string_of_val(v_name),base.get());
-  CAMLreturn(Bool_val(exists));
+  CAMLreturn(Val_bool(exists));
 }
 CAML_HT_END
 
 CAML_HT_F4(client_drop_ns, v_client, v_base, v_if_exists, v_name)
 {
   NamespacePtr base;
-  bool if_exists = false;
   if (Val_none != v_base)
     base = ml_Namespace::get(Some_val(v_base));
-  if(Val_none != v_if_exists)
-    if_exists = Bool_val(Some_val(v_if_exists));
-  ml_Client::get(v_client)->drop_namespace(string_of_val(v_name), base.get(), if_exists);
+  ml_Client::get(v_client)->drop_namespace(string_of_val(v_name), base.get(), Bool_val(v_if_exists));
   CAMLreturn(Val_unit);
 }
 CAML_HT_END
@@ -262,12 +254,10 @@ CAML_HT_F2(ns_exists_table, v_ns, v_name)
 }
 CAML_HT_END
 
-CAML_HT_F3(ns_get_schema, v_ns, v_with_ids, v_name)
+CAML_HT_F3(ns_get_schema, v_ns, v_name, v_with_ids)
 {
-  CAMLlocal1(v_schema);
   String schema = ml_Namespace::get(v_ns)->get_schema_str(string_of_val(v_name), Bool_val(v_with_ids));
-  v_schema = caml_alloc_string(schema.length());
-  CAMLreturn(v_schema);
+  CAMLreturn(val_of_string(schema));
 }
 CAML_HT_END
 
@@ -393,16 +383,21 @@ CAML_HT_END
 
 #define CAML_UNLOCKED(smth) do { caml_blocking_section lock; smth; } while (0)
 
-CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
+static key_spec_of_val(KeySpecBuilder& key, value v_key)
 {
-  KeySpecBuilder key;
   key.set_row(String_val(Field(v_key,0)));
   key.set_column_family(String_val(Field(v_key,1)));
-  if (Val_none != Field(v_key,2)) 
+  if (Val_none != Field(v_key,2))
   {
     key.set_column_qualifier(String_val(Some_val(Field(v_key,2))));
   }
   key.set_timestamp(Int64_val(Field(v_key,3)));
+}
+
+CAML_HT_F3(tmut_set_key, v_tmut, v_key, v_val)
+{
+  KeySpecBuilder key;
+  key_spec_of_val(key, v_key);
   String val(String_val(v_val), caml_string_length(v_val));
   TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->set(key.get(), val));
@@ -426,19 +421,10 @@ CAML_HT_F5(tmut_set, v_tmut, v_row, v_cf, v_cq, v_val)
 }
 CAML_HT_END
 
-CAML_HT_F2(tmut_set_delete, v_tmut, v_key)
+CAML_HT_F2(tmut_delete, v_tmut, v_key)
 {
   KeySpecBuilder key;
-  key.set_row(String_val(Field(v_key,0)));
-  if (Val_none != Field(v_key,1)) 
-  {
-    key.set_column_family(String_val(Field(v_key,1)));
-  }
-  if (Val_none != Field(v_key,2)) 
-  {
-    key.set_column_qualifier(String_val(Some_val(Field(v_key,2))));
-  }
-  key.set_timestamp(Int64_val(Field(v_key,3)));
+  key_spec_of_val(key, v_key);
   TableMutatorPtr p = ml_TableMutator::get(v_tmut);
   CAML_UNLOCKED(p->set_delete(key.get()));
   CAMLreturn(Val_unit);
