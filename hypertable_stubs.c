@@ -1,6 +1,8 @@
 
 #include "cxx_wrapped.h"
 #include <Common/Compat.h>
+#include <Hypertable/Lib/TableDumper.h>
+#include <Hypertable/Lib/HqlInterpreter.h>
 #include <Hypertable/Lib/Client.h>
 
 using namespace Hypertable;
@@ -10,6 +12,7 @@ typedef wrapped<ClientPtr> ml_Client;
 typedef wrapped<TablePtr> ml_Table;
 typedef wrapped<TableMutatorPtr> ml_TableMutator;
 typedef wrapped<TableScannerPtr> ml_TableScanner;
+typedef wrapped<TableDumperPtr> ml_TableDumper;
 typedef wrapped_ptr<ScanSpecBuilder> ml_ScanSpecBuilder;
 
 template<> char const* ml_name<ml_Client::type>() { return "hypertable.Client"; }
@@ -17,8 +20,27 @@ template<> char const* ml_name<ml_Namespace::type>() { return "hypertable.Namesp
 template<> char const* ml_name<ml_Table::type>() { return "hypertable.Table"; }
 template<> char const* ml_name<ml_TableMutator::type>() { return "hypertable.TableMutator"; }
 template<> char const* ml_name<ml_TableScanner::type>() { return "hypertable.TableScanner"; }
+template<> char const* ml_name<ml_TableDumper::type>() { return "hypertable.TableDumper"; }
 template<> char const* ml_name<ml_ScanSpecBuilder::type>() { return "hypertable.ScanSpecBuilder"; }
 
+struct HqlCallback : HqlInterpreter::Callback {
+  std::vector<String> retstrs; 
+  TableDumperPtr dumper;
+  TableScannerPtr scanner;
+  TableMutatorPtr mutator;
+  
+  HqlCallback() { 
+    retstrs = std::vector<String>();
+    scanner = NULL;
+    mutator = NULL;
+    dumper = NULL;
+  }
+
+  virtual void on_return(const String &ret) { retstrs.push_back(ret); }
+  virtual void on_scan(TableScanner &s) { scanner = &s; }
+  virtual void on_dump(TableDumper &d) { dumper = &d; }
+  virtual void on_finish(TableMutator *m = 0) { mutator = m; }
+};
 extern "C" {
 
 #include <caml/callback.h>
@@ -135,6 +157,7 @@ CAMLprim value caml_hypertable_values_count(value v_unit)
 
   v_list = Val_nil;
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Table::name()), Val_int(ml_Table::count())));
+  v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableDumper::name()), Val_int(ml_TableDumper::count())));
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableScanner::name()), Val_int(ml_TableScanner::count())));
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableMutator::name()), Val_int(ml_TableMutator::count())));
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Namespace::name()), Val_int(ml_Namespace::count())));
@@ -162,6 +185,66 @@ CAML_HT_F4(client_create, v_install_dir, v_cfg_file, v_timeout_ms, v_unit)
     p = new Client(install_dir, string_of_val(Some_val(v_cfg_file)), timeout);
   }
   CAMLreturn(ml_Client::alloc(p));
+}
+CAML_HT_END
+
+CAML_HT_F3(client_query, v_client, v_namespace, v_query)
+{  
+    CAMLlocal3(v_result, cli, cons);
+    HqlInterpreterPtr interpreter = ml_Client::get(v_client)->create_hql_interpreter();
+    interpreter->set_namespace(string_of_val(v_namespace));
+    HqlCallback callback;
+    
+    try 
+    {
+        interpreter->execute(string_of_val(v_query), callback);
+    } 
+    catch(Exception &e) 
+    {
+        caml_failwith(e.what());
+        assert(false);
+        CAMLreturn(Val_unit);
+    }
+    
+    if(callback.retstrs.size() > 0)
+    {
+        cli = Val_int(0);
+        std::vector<String>::iterator it;        
+        for(it=callback.retstrs.end() - 1; it >= callback.retstrs.begin(); it--)
+        {     
+            cons = caml_alloc(2, 0);            
+            Store_field(cons, 0, val_of_string(*it));
+            Store_field(cons, 1, cli);
+            cli = cons;
+        }
+        v_result = caml_alloc(2, 0);
+        Store_field(v_result, 0, cli);
+        Store_field(v_result, 1, Val_int(0));
+        CAMLreturn(v_result);
+    }
+      
+    if(callback.dumper != NULL) {
+        v_result = caml_alloc(2, 1);
+        Store_field(v_result, 0, ml_TableDumper::alloc(callback.dumper));
+        Store_field(v_result, 1, Val_int(1));
+        CAMLreturn(v_result);
+    } 
+    
+    if(callback.scanner != NULL) {
+        v_result = caml_alloc(2, 2);
+        Store_field(v_result, 0, ml_TableScanner::alloc(callback.scanner));
+        Store_field(v_result, 1, Val_int(2));
+        CAMLreturn(v_result);
+    }
+
+    if(callback.mutator != NULL) {
+        v_result = caml_alloc(2, 3);
+        Store_field(v_result, 0, ml_TableMutator::alloc(callback.mutator));
+        Store_field(v_result, 1, Val_int(3));
+        CAMLreturn(v_result);
+    } 
+    
+    CAMLreturn(Val_int(4));  
 }
 CAML_HT_END
 
@@ -381,9 +464,41 @@ CAML_HT_F1(tscan_bytes, v_tscan)
 }
 CAML_HT_END
 
+CAML_HT_F1(tdump_next, v_tdump)
+{
+  CAMLlocal2(v_cell, v_val);
+  Cell cell;
+  if (ml_TableDumper::get(v_tdump)->next(cell))
+  {
+    v_cell = caml_alloc(6, 0);
+    v_val = caml_alloc_string(cell.value_len);
+    memcpy(String_val(v_val), cell.value, cell.value_len);
+
+    Store_field(v_cell,0,caml_copy_string(cell.row_key));
+    Store_field(v_cell,1,caml_copy_string(cell.column_family));
+    Store_field(v_cell,2,(NULL != cell.column_qualifier ? Val_some(caml_copy_string(cell.column_qualifier)) : Val_none));
+    Store_field(v_cell,3,caml_copy_int64(cell.timestamp));
+    Store_field(v_cell,4,v_val);
+    Store_field(v_cell,5,Val_int(cell.flag));
+
+    CAMLreturn(Val_some(v_cell));
+  }
+  else
+  {
+    CAMLreturn(Val_none);
+  }
+}
+CAML_HT_END
+
+CAML_HT_F1(tdump_bytes, v_tdump)
+{
+  CAMLreturn(caml_copy_int64(ml_TableDumper::get(v_tdump)->bytes_scanned()));
+}
+CAML_HT_END
+
 #define CAML_UNLOCKED(smth) do { caml_blocking_section lock; smth; } while (0)
 
-static key_spec_of_val(KeySpecBuilder& key, value v_key)
+static void key_spec_of_val(KeySpecBuilder& key, value v_key)
 {
   key.set_row(String_val(Field(v_key,0)));
   key.set_column_family(String_val(Field(v_key,1)));
@@ -449,6 +564,7 @@ CAML_HT_F1(tmut_memory_used, v_tmut)
 CAML_HT_END
 
 CAML_HT_DTOR(ml_ScanSpecBuilder,scanspec_release)
+CAML_HT_DTOR(ml_TableDumper,tdump_release)
 CAML_HT_DTOR(ml_TableScanner,tscan_release)
 CAML_HT_DTOR(ml_TableMutator,tmut_release)
 CAML_HT_DTOR(ml_Table,table_release)

@@ -16,8 +16,8 @@ external memory_used : t -> int64 = "caml_hypertable_tmut_memory_used"
 external release : t -> unit = "caml_hypertable_tmut_release"
 end
 
-type cell = { c_row : string; c_cf : string; c_cq : string option; c_t : int64; c_v : string; c_flag : int; }
-
+type cell = { c_row : string; c_cf : string; c_cq : string option; c_t : int64; c_v : string; c_flag : int; }  
+    
 module ScanSpec = struct
 type t
 external create : unit -> t = "caml_hypertable_scanspec_create"
@@ -38,6 +38,13 @@ external set_max_versions : t -> int -> unit = "caml_hypertable_scanspec_set_max
 
 external keys_only : t -> bool -> unit = "caml_hypertable_scanspec_keys_only"
 external release : t -> unit = "caml_hypertable_scanspec_release"
+end
+
+module Dumper = struct
+type t
+external next : t -> cell option = "caml_hypertable_tdump_next"
+external bytes : t -> int64 = "caml_hypertable_tdump_bytes"
+external release : t -> unit = "caml_hypertable_tdump_release"
 end
 
 module Scanner = struct
@@ -70,9 +77,17 @@ external get_schema : t -> string -> bool -> string = "caml_hypertable_ns_get_sc
 external release : t -> unit = "caml_hypertable_ns_release"
 end
 
+type hql_result = 
+      String_result of string list
+    | Dumper_result of Dumper.t
+    | Scanner_result of Scanner.t
+    | Mutator_result of Mutator.t
+    | Empty_result
+
 module Client = struct
 type t
 external create : ?dir:string -> ?cfg:string -> ?timeout:int -> unit -> t = "caml_hypertable_client_create"
+external query : t -> string -> string -> hql_result = "caml_hypertable_client_query"
 external open_ns : t -> ?base:Namespace.t -> string -> Namespace.t = "caml_hypertable_client_open_ns"
 external create_ns : t -> ?base:Namespace.t -> bool -> string -> unit = "caml_hypertable_client_create_ns"
 let create_ns t ?base ?(intermediate=false) name = create_ns t ?base intermediate name
