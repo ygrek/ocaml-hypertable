@@ -66,7 +66,9 @@ external drop_table : t -> string -> bool -> unit = "caml_hypertable_ns_drop_tab
 external rename_table : t -> string -> string -> unit = "caml_hypertable_ns_rename_table"
 external refresh_table : t -> string -> unit = "caml_hypertable_ns_refresh_table"
 external exists_table : t -> string -> bool = "caml_hypertable_ns_exists_table"
-external get_schema : t -> string -> bool -> string = "caml_hypertable_ns_get_schema"
+external get_schema_str : t -> string -> with_ids:bool -> string = "caml_hypertable_ns_get_schema_str"
+(** @return list of namespaces and list of tables. Each element of the list is [name,id] pair. *)
+external get_listing : t -> (string * string) list * (string * string) list = "caml_hypertable_ns_get_listing"
 external release : t -> unit = "caml_hypertable_ns_release"
 end
 

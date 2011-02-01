@@ -46,8 +46,6 @@ static value Val_pair(value v1, value v2)
 
 static value Val_cons(value list, value v) { return Val_pair(v,list); }
 
-#define Val_nil Val_int(0)
-
 #define Some_val(v) Field(v,0)
 
 #define Bytes_val(v) (&Byte_u(v,0))
@@ -115,6 +113,8 @@ CAML_HT_F1(name, v) \
 } \
 CAML_HT_END
 
+#define CAML_UNLOCKED(smth) do { caml_blocking_section lock; smth; } while (0)
+
 static void raise_error(Exception& e) 
 {
   static value* exn = NULL;
@@ -133,7 +133,7 @@ CAMLprim value caml_hypertable_values_count(value v_unit)
   CAMLparam1(v_unit);
   CAMLlocal1(v_list);
 
-  v_list = Val_nil;
+  v_list = Val_emptylist;
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_Table::name()), Val_int(ml_Table::count())));
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableScanner::name()), Val_int(ml_TableScanner::count())));
   v_list = Val_cons(v_list, Val_pair(caml_copy_string(ml_TableMutator::name()), Val_int(ml_TableMutator::count())));
@@ -254,10 +254,29 @@ CAML_HT_F2(ns_exists_table, v_ns, v_name)
 }
 CAML_HT_END
 
-CAML_HT_F3(ns_get_schema, v_ns, v_name, v_with_ids)
+CAML_HT_F3(ns_get_schema_str, v_ns, v_name, v_with_ids)
 {
   String schema = ml_Namespace::get(v_ns)->get_schema_str(string_of_val(v_name), Bool_val(v_with_ids));
   CAMLreturn(val_of_string(schema));
+}
+CAML_HT_END
+
+CAML_HT_F1(ns_get_listing,v_ns)
+{
+  CAMLlocal3(v_list_ns,v_list_table,v_pair);
+  std::vector<NamespaceListing> l;
+  CAML_UNLOCKED(ml_Namespace::get(v_ns)->get_listing(l));
+  v_list_ns = Val_emptylist;
+  v_list_table = Val_emptylist;
+  BOOST_FOREACH(NamespaceListing const& x, l)
+  {
+    v_pair = Val_pair(val_of_string(x.name), val_of_string(x.id));
+    if (x.is_namespace)
+      v_list_ns = Val_cons(v_list_ns, v_pair);
+    else
+      v_list_table = Val_cons(v_list_table, v_pair);
+  }
+  CAMLreturn(Val_pair(v_list_ns,v_list_table));
 }
 CAML_HT_END
 
@@ -381,9 +400,7 @@ CAML_HT_F1(tscan_bytes, v_tscan)
 }
 CAML_HT_END
 
-#define CAML_UNLOCKED(smth) do { caml_blocking_section lock; smth; } while (0)
-
-static key_spec_of_val(KeySpecBuilder& key, value v_key)
+static void key_spec_of_val(KeySpecBuilder& key, value v_key)
 {
   key.set_row(String_val(Field(v_key,0)));
   key.set_column_family(String_val(Field(v_key,1)));
