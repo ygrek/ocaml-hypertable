@@ -33,7 +33,7 @@ let () =
     print_endline (Namespace.get_schema_str ns table false)
   | "list"::ns::[] ->
     let ns = start ns in
-    let (ln,lt) = Namespace.get_listing ns in
+    let (ln,lt) = Namespace.get_listing ns true in
     printfn "Namespaces:";
     List.iter (fun (name,id) -> printfn "  [%s] %s" id name) ln;
     printfn "Tables:";

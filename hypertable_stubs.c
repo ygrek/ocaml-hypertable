@@ -205,9 +205,16 @@ CAML_HT_F4(client_drop_ns, v_client, v_base, v_if_exists, v_name)
 }
 CAML_HT_END
 
-CAML_HT_F3(ns_open_table, v_ns, v_name, v_force)
+static int open_table_flags[] = {
+  Table::OPEN_FLAG_BYPASS_TABLE_CACHE,
+  Table::OPEN_FLAG_REFRESH_TABLE_CACHE,
+  Table::OPEN_FLAG_NO_AUTO_TABLE_REFRESH,
+};
+
+CAML_HT_F3(ns_open_table, v_ns, v_name, v_flags)
 {
-  TablePtr p = ml_Namespace::get(v_ns)->open_table(string_of_val(v_name), Bool_val(v_force));
+  int flags = caml_convert_flag_list(v_flags, open_table_flags);
+  TablePtr p = ml_Namespace::get(v_ns)->open_table(string_of_val(v_name), flags);
   CAMLreturn(ml_Table::alloc(p));
 }
 CAML_HT_END
@@ -261,11 +268,11 @@ CAML_HT_F3(ns_get_schema_str, v_ns, v_name, v_with_ids)
 }
 CAML_HT_END
 
-CAML_HT_F1(ns_get_listing,v_ns)
+CAML_HT_F2(ns_get_listing,v_ns,v_sub)
 {
   CAMLlocal3(v_list_ns,v_list_table,v_pair);
   std::vector<NamespaceListing> l;
-  CAML_UNLOCKED(ml_Namespace::get(v_ns)->get_listing(l));
+  CAML_UNLOCKED(ml_Namespace::get(v_ns)->get_listing(Bool_val(v_sub),l));
   v_list_ns = Val_emptylist;
   v_list_table = Val_emptylist;
   BOOST_FOREACH(NamespaceListing const& x, l)
@@ -287,10 +294,10 @@ CAML_HT_F4(table_create_mutator, v_table, v_timeout, v_flags, v_flush_interval)
 }
 CAML_HT_END
 
-CAML_HT_F4(table_create_scanner, v_table, v_scanspec, v_timeout, v_retry)
+CAML_HT_F3(table_create_scanner, v_table, v_scanspec, v_timeout)
 {
   ScanSpec& scanspec = ml_ScanSpecBuilder::get(v_scanspec)->get();
-  TableScannerPtr p = ml_Table::get(v_table)->create_scanner(scanspec, Int_val(v_timeout), Bool_val(v_retry));
+  TableScannerPtr p = ml_Table::get(v_table)->create_scanner(scanspec, Int_val(v_timeout));
   CAMLreturn(ml_TableScanner::alloc(p));
 }
 CAML_HT_END

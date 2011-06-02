@@ -51,15 +51,20 @@ module Table = struct
 type t
 external mutator : t -> int -> int -> int -> Mutator.t = "caml_hypertable_table_create_mutator"
 let mutator ?(timeout=0) ?(flags=0) ?(flush=0) t = mutator t timeout flags flush
-external scanner : t -> ScanSpec.t -> int -> bool -> Scanner.t = "caml_hypertable_table_create_scanner"
-let scanner t ?(timeout=0) ?(retry=false) scanspec = scanner t scanspec timeout retry
+external scanner : t -> ScanSpec.t -> int -> Scanner.t = "caml_hypertable_table_create_scanner"
+let scanner t ?(timeout=0) scanspec = scanner t scanspec timeout
 external release : t -> unit = "caml_hypertable_table_release"
 end
 
+type open_table_flag =
+  | OPEN_FLAG_BYPASS_TABLE_CACHE
+  | OPEN_FLAG_REFRESH_TABLE_CACHE
+  | OPEN_FLAG_NO_AUTO_TABLE_REFRESH
+
 module Namespace = struct
 type t
-external open_table : t -> string -> bool -> Table.t = "caml_hypertable_ns_open_table"
-let open_table ns ?(force=false) name = open_table ns name force
+external open_table : t -> string -> open_table_flag list -> Table.t = "caml_hypertable_ns_open_table"
+let open_table ns ?(flags=[]) name = open_table ns name flags
 external create_table : t -> string -> string -> unit = "caml_hypertable_ns_create_table"
 external alter_table : t -> string -> string -> unit = "caml_hypertable_ns_alter_table"
 external drop_table : t -> string -> bool -> unit = "caml_hypertable_ns_drop_table"
@@ -67,8 +72,11 @@ external rename_table : t -> string -> string -> unit = "caml_hypertable_ns_rena
 external refresh_table : t -> string -> unit = "caml_hypertable_ns_refresh_table"
 external exists_table : t -> string -> bool = "caml_hypertable_ns_exists_table"
 external get_schema_str : t -> string -> with_ids:bool -> string = "caml_hypertable_ns_get_schema_str"
-(** @return list of namespaces and list of tables. Each element of the list is [name,id] pair. *)
-external get_listing : t -> (string * string) list * (string * string) list = "caml_hypertable_ns_get_listing"
+(** 
+  [get_listing t sub]
+  @param sub true to include subentries
+  @return list of namespaces and list of tables. Each element of the list is [name,id] pair. *)
+external get_listing : t -> bool -> (string * string) list * (string * string) list = "caml_hypertable_ns_get_listing"
 external release : t -> unit = "caml_hypertable_ns_release"
 end
 
