@@ -43,7 +43,8 @@ end
 module Scanner = struct
 type t
 external next : t -> cell option = "caml_hypertable_tscan_next"
-external bytes : t -> int64 = "caml_hypertable_tscan_bytes"
+(* not available in 0.9.7 *)
+(* external bytes : t -> int64 = "caml_hypertable_tscan_bytes" *)
 external release : t -> unit = "caml_hypertable_tscan_release"
 end
 

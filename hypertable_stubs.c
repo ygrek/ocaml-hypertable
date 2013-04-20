@@ -401,11 +401,13 @@ CAML_HT_F1(tscan_next, t_scan)
 }
 CAML_HT_END
 
+/*
 CAML_HT_F1(tscan_bytes, v_tscan)
 {
   CAMLreturn(caml_copy_int64(ml_TableScanner::get(v_tscan)->bytes_scanned()));
 }
 CAML_HT_END
+*/
 
 static void key_spec_of_val(KeySpecBuilder& key, value v_key)
 {
